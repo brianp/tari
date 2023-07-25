@@ -1,5 +1,6 @@
 #toolchain=nightly-2022-11-03
-toolchain=${toolchain:-nightly-2023-06-03}
+#toolchain = $(toolchain)
+toolchain ?= nightly-2023-06-03
 
 .phony: test
 test:
