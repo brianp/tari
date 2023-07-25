@@ -6065,6 +6065,7 @@ dependencies = [
  "itertools",
  "libsqlite3-sys",
  "log",
+ "num-derive",
  "prost 0.9.0",
  "rand 0.7.3",
  "serde",
