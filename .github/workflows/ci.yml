@@ -59,7 +59,9 @@ jobs:
             tari-${{ runner.os }}-${{ runner.cpu-model }}-${{ env.toolchain }}-nightly-${{ hashFiles('**/Cargo.lock') }}
             tari-${{ runner.os }}-${{ runner.cpu-model }}-${{ env.toolchain }}-nightly
       - name: cargo format
-        run: cargo fmt --all -- --check
+        run: |
+          rustup component add rustfmt --toolchain nightly-2023-06-03-x86_64-unknown-linux-gnu
+          cargo fmt --all -- --check
       - name: Install cargo-lints
         run: cargo install cargo-lints
       - name: Clippy check (with lints)
