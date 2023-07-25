@@ -1,4 +1,4 @@
-// Copyright 2023 The Tari Project
+// Copyright 2023. The Tari Project
 //
 // Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 // following conditions are met:
@@ -20,25 +20,30 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 // USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-mod wrapper;
-pub use wrapper::TransactionKeyManagerWrapper;
+use tari_service_framework::reply_channel::SenderService;
 
-mod interface;
-pub use interface::{
-    SecretTransactionKeyManagerInterface,
-    TariKeyId,
-    TransactionKeyManagerBranch,
-    TransactionKeyManagerInterface,
-    TxoStage,
-};
+pub enum LedgerServiceRequest {}
 
-mod initializer;
-pub use initializer::TransactionKeyManagerInitializer;
+pub enum LedgerServiceResponse {}
 
-mod abstract_inner;
+pub enum LedgerServiceError {}
 
-mod ledger_wallet_inner;
-pub use ledger_wallet_inner::TransactionKeyManagerLedgerWalletInner;
+#[derive(Clone)]
+pub struct LedgerWalletHandle {
+    request_response_service: SenderService<LedgerServiceRequest, Result<LedgerServiceResponse, LedgerServiceError>>,
+}
 
-mod console_wallet_inner;
-pub use console_wallet_inner::TransactionKeyManagerConsoleWalletInner;
+impl LedgerWalletHandle {
+    pub fn new(
+        request_response_service: SenderService<
+            LedgerServiceRequest,
+            Result<LedgerServiceResponse, LedgerServiceError>,
+        >,
+    ) -> Self {
+        Self {
+            request_response_service,
+        }
+    }
+
+    // Impl things here
+}

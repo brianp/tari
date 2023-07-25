@@ -1,4 +1,4 @@
-// Copyright 2023 The Tari Project
+// Copyright 2023. The Tari Project
 //
 // Redistribution and use in source and binary forms, with or without modification, are permitted provided that the
 // following conditions are met:
@@ -20,25 +20,6 @@
 // WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 // USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-mod wrapper;
-pub use wrapper::TransactionKeyManagerWrapper;
-
-mod interface;
-pub use interface::{
-    SecretTransactionKeyManagerInterface,
-    TariKeyId,
-    TransactionKeyManagerBranch,
-    TransactionKeyManagerInterface,
-    TxoStage,
-};
-
-mod initializer;
-pub use initializer::TransactionKeyManagerInitializer;
-
-mod abstract_inner;
-
-mod ledger_wallet_inner;
-pub use ledger_wallet_inner::TransactionKeyManagerLedgerWalletInner;
-
-mod console_wallet_inner;
-pub use console_wallet_inner::TransactionKeyManagerConsoleWalletInner;
+pub mod handle;
+pub mod initializer;
+pub mod service;
