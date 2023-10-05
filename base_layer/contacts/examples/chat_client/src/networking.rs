@@ -22,7 +22,7 @@
 
 use std::{str::FromStr, sync::Arc, time::Duration};
 
-use minotari_app_utilities::identity_management;
+use minotari_app_utilities::{identity_management, identity_management::load_from_json};
 use tari_common::exit_codes::{ExitCode, ExitError};
 // Re-exports
 pub use tari_comms::{
@@ -57,11 +57,15 @@ pub async fn start(
     let (publisher, subscription_factory) = pubsub_connector(100);
     let in_msg = Arc::new(subscription_factory);
 
-    let p2p_config = config.chat_client.p2p.clone();
+    let mut p2p_config = config.chat_client.p2p.clone();
+
+    let tor_identity =
+        load_from_json(&config.chat_client.tor_identity_file).map_err(|e| ExitError::new(ExitCode::ConfigError, e))?;
+    p2p_config.transport.tor.identity = tor_identity;
 
     let fut = StackBuilder::new(shutdown_signal)
         .add_initializer(P2pInitializer::new(
-            config.chat_client.p2p.clone(),
+            p2p_config.clone(),
             config.peer_seeds.clone(),
             config.chat_client.network,
             node_identity,
@@ -102,7 +106,7 @@ pub async fn start(
         peer_manager.add_peer(peer).await?;
     }
 
-    let comms = spawn_comms_using_transport(comms, config.chat_client.p2p.transport.clone())
+    let comms = spawn_comms_using_transport(comms, p2p_config.transport.clone())
         .await
         .unwrap();
 
