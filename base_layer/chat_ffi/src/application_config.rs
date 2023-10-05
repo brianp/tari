@@ -182,7 +182,6 @@ pub unsafe extern "C" fn create_chat_config(
     let mut chat_client_config = ChatClientConfig::default();
     chat_client_config.network = network;
     chat_client_config.p2p.transport = (*tor_transport_config).clone();
-    chat_client_config.p2p.public_addresses = MultiaddrList::from(vec![address]);
     chat_client_config.log_path = Some(log_path);
     chat_client_config.log_verbosity = Some(log_verbosity);
     chat_client_config.identity_file = identity_path;
