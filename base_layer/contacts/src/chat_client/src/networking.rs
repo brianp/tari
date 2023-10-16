@@ -20,8 +20,9 @@
 //   WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 //   USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-use std::{str::FromStr, sync::Arc, time::Duration};
+use std::{path::Path, str::FromStr, sync::Arc, time::Duration};
 
+use log::debug;
 use minotari_app_utilities::{identity_management, identity_management::load_from_json};
 use tari_common::exit_codes::{ExitCode, ExitError};
 // Re-exports
@@ -46,6 +47,8 @@ use crate::{
     database::{connect_to_db, create_chat_storage},
 };
 
+const LOG_TARGET: &str = "contacts::chat_client";
+
 pub async fn start(
     node_identity: Arc<NodeIdentity>,
     config: ApplicationConfig,
@@ -59,6 +62,7 @@ pub async fn start(
 
     let mut p2p_config = config.chat_client.p2p.clone();
 
+    debug!(target: "tracing::tor_problems", "tor file path is: '{:?}' and file exists: '{}'", &config.chat_client.tor_identity_file, Path::new(&config.chat_client.tor_identity_file).exists());
     let tor_identity =
         load_from_json(&config.chat_client.tor_identity_file).map_err(|e| ExitError::new(ExitCode::ConfigError, e))?;
     p2p_config.transport.tor.identity = tor_identity;

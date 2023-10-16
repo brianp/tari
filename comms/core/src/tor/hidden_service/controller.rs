@@ -342,6 +342,7 @@ impl HiddenServiceController {
         // Initialize a onion hidden service - either from the given private key or by creating a new one
         match self.identity.take() {
             Some(identity) => {
+                debug!(target: "tracing::tor_problems", "create or reuse onion");
                 let resp = self.create_or_reuse_onion(&identity).await?;
                 self.identity = Some(TorIdentity {
                     onion_port: resp.onion_port,
@@ -349,6 +350,7 @@ impl HiddenServiceController {
                 });
             },
             None => {
+                debug!(target: "tracing::tor_problems", "we have no id here either");
                 let port_mapping = self.proxied_port_mapping;
                 let resp = self.client_mut()?.add_onion(vec![], port_mapping, None).await?;
                 let private_key = resp
@@ -367,7 +369,7 @@ impl HiddenServiceController {
         let identity = self.identity.as_ref().map(Clone::clone).expect("already checked");
         debug!(
             target: LOG_TARGET,
-            "Added hidden service with service id '{}' on port '{}'", identity.service_id, identity.onion_port
+            "Added hidden service with service id '{}' on port '{}' with address", identity.service_id, identity.onion_port
         );
 
         let proxied_addr = socketaddr_to_multiaddr(self.proxied_port_mapping.proxied_address());
@@ -404,13 +406,16 @@ impl HiddenServiceController {
                 .await;
 
             match result {
-                Ok(resp) => break Ok(resp),
+                Ok(resp) => {
+                    debug!(target: "tracing::tor_problems", "we added the existing id fine");
+                    break Ok(resp);
+                },
                 Err(TorClientError::OnionAddressCollision) => {
-                    debug!(target: LOG_TARGET, "Onion address is already registered.");
+                    debug!(target: "tracing::tor_problems", "Onion address is already registered.");
 
                     let detached = client.get_info("onions/detached").await?;
                     debug!(
-                        target: LOG_TARGET,
+                        target: "tracing::tor_problems",
                         "Checking that the active detached service IDs '{}' to expected service id '{}'",
                         detached.join(", "),
                         identity.service_id
@@ -420,13 +425,16 @@ impl HiddenServiceController {
                         return Err(HiddenServiceControllerError::InvalidDetachedServiceId);
                     }
                     debug!(
-                        target: LOG_TARGET,
+                        target: "tracing::tor_problems",
                         "Deleting duplicate onion service `{}` and then recreating it.", identity.service_id
                     );
                     client.del_onion(&identity.service_id).await?;
                     continue;
                 },
-                Err(err) => break Err(err.into()),
+                Err(err) => {
+                    debug!(target: "tracing::tor_problems", "a whole different error");
+                    break Err(err.into());
+                },
             }
         }
     }

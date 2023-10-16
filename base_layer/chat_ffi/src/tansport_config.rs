@@ -137,7 +137,7 @@ pub unsafe extern "C" fn create_chat_tor_transport_config(
                 tor: TorTransportConfig {
                     control_address: v,
                     control_auth: tor_authentication,
-                    // The wallet will populate this from the db
+                    // Chat will populate this on initialization
                     identity: None,
                     onion_port,
                     socks_auth: socks_authentication,
