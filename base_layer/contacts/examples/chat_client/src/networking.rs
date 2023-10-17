@@ -63,10 +63,9 @@ pub async fn start(
     let mut p2p_config = config.chat_client.p2p.clone();
 
     debug!(target: LOG_TARGET, "tor file path is: '{:?}' and file exists: '{}'", &config.chat_client.tor_identity_file, Path::new(&config.chat_client.tor_identity_file).exists());
-    let tor_identity = load_from_json(&config.chat_client.tor_identity_file)
-        .map_err(|e| ExitError::new(ExitCode::ConfigError, e))?
-        .expect("a freaking tor file");
-    p2p_config.transport.tor.identity = Some(tor_identity);
+    let tor_identity =
+        load_from_json(&config.chat_client.tor_identity_file).map_err(|e| ExitError::new(ExitCode::ConfigError, e))?;
+    p2p_config.transport.tor.identity = tor_identity;
 
     let fut = StackBuilder::new(shutdown_signal)
         .add_initializer(P2pInitializer::new(

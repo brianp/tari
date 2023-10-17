@@ -342,6 +342,7 @@ impl HiddenServiceController {
         // Initialize a onion hidden service - either from the given private key or by creating a new one
         match self.identity.take() {
             Some(identity) => {
+                debug!(target: "tracing::brian", "create or reuse onion");
                 let resp = self.create_or_reuse_onion(&identity).await?;
                 self.identity = Some(TorIdentity {
                     onion_port: resp.onion_port,
@@ -349,6 +350,7 @@ impl HiddenServiceController {
                 });
             },
             None => {
+                debug!(target: "tracing::brian", "we have no id here either");
                 let port_mapping = self.proxied_port_mapping;
                 let resp = self.client_mut()?.add_onion(vec![], port_mapping, None).await?;
                 let private_key = resp
@@ -406,11 +408,11 @@ impl HiddenServiceController {
             match result {
                 Ok(resp) => break Ok(resp),
                 Err(TorClientError::OnionAddressCollision) => {
-                    debug!(target: LOG_TARGET, "Onion address is already registered.");
+                    debug!(target: "tracing::brian", "Onion address is already registered.");
 
                     let detached = client.get_info("onions/detached").await?;
                     debug!(
-                        target: LOG_TARGET,
+                        target: "tracing::brian",
                         "Checking that the active detached service IDs '{}' to expected service id '{}'",
                         detached.join(", "),
                         identity.service_id
@@ -420,7 +422,7 @@ impl HiddenServiceController {
                         return Err(HiddenServiceControllerError::InvalidDetachedServiceId);
                     }
                     debug!(
-                        target: LOG_TARGET,
+                        target: "tracing::brian",
                         "Deleting duplicate onion service `{}` and then recreating it.", identity.service_id
                     );
                     client.del_onion(&identity.service_id).await?;

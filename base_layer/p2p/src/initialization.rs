@@ -304,7 +304,10 @@ fn initialize_hidden_service(
     }
 
     if let Some(identity) = config.identity.take() {
+        debug!(target: "tracing::brian", "we have an id file");
         builder = builder.with_tor_identity(identity);
+    } else {
+        debug!(target: "tracing::brian", "we have no id file");
     }
 
     let hidden_svc_ctl = builder.build()?;
