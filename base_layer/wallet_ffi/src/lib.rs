@@ -5530,7 +5530,7 @@ pub unsafe extern "C" fn wallet_create(
         key_manager_backend,
         shutdown.to_signal(),
         master_seed,
-        WalletType::Software,
+        WalletType::default(),
     ));
 
     match w {
