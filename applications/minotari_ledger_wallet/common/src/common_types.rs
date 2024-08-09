@@ -84,6 +84,7 @@ pub enum Instruction {
     GetScriptSchnorrSignature = 0x10,
     GetOneSidedMetadataSignature = 0x11,
     GetScriptSignatureManaged = 0x12,
+    SetOneSidedMetadataSignatureMessage = 0x13,
 }
 
 impl Instruction {
@@ -105,6 +106,7 @@ impl Instruction {
             0x10 => Some(Instruction::GetScriptSchnorrSignature),
             0x11 => Some(Instruction::GetOneSidedMetadataSignature),
             0x12 => Some(Instruction::GetScriptSignatureManaged),
+            0x13 => Some(Instruction::SetOneSidedMetadataSignatureMessage),
             _ => None,
         }
     }
@@ -283,6 +285,10 @@ mod test {
                     assert_eq!(Instruction::from_byte(*expected_byte), Some(*instruction));
                 },
                 Instruction::GetScriptSignatureManaged => {
+                    assert_eq!(instruction.as_byte(), *expected_byte);
+                    assert_eq!(Instruction::from_byte(*expected_byte), Some(*instruction));
+                },
+                Instruction::SetOneSidedMetadataSignatureMessage => {
                     assert_eq!(instruction.as_byte(), *expected_byte);
                     assert_eq!(Instruction::from_byte(*expected_byte), Some(*instruction));
                 },

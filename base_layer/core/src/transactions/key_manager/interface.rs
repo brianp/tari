@@ -25,24 +25,31 @@ use std::str::FromStr;
 use blake2::Blake2b;
 use digest::consts::U64;
 use strum_macros::EnumIter;
-use tari_common_types::types::{ComAndPubSignature, Commitment, PrivateKey, PublicKey, RangeProof, Signature};
+use tari_common_types::{
+    tari_address::TariAddress,
+    types::{ComAndPubSignature, Commitment, PrivateKey, PublicKey, RangeProof, Signature},
+};
 use tari_comms::types::CommsDHKE;
 use tari_crypto::{hashing::DomainSeparatedHash, ristretto::RistrettoComSig};
 use tari_key_manager::key_manager_service::{KeyAndId, KeyId, KeyManagerInterface, KeyManagerServiceError};
-use tari_script::CheckSigSchnorrSignature;
+use tari_script::{CheckSigSchnorrSignature, TariScript};
 
-use crate::transactions::{
-    tari_amount::MicroMinotari,
-    transaction_components::{
-        encrypted_data::PaymentId,
-        EncryptedData,
-        KernelFeatures,
-        RangeProofType,
-        TransactionError,
-        TransactionInputVersion,
-        TransactionKernelVersion,
-        TransactionOutput,
-        TransactionOutputVersion,
+use crate::{
+    covenants::Covenant,
+    transactions::{
+        tari_amount::MicroMinotari,
+        transaction_components::{
+            encrypted_data::PaymentId,
+            EncryptedData,
+            KernelFeatures,
+            OutputFeatures,
+            RangeProofType,
+            TransactionError,
+            TransactionInputVersion,
+            TransactionKernelVersion,
+            TransactionOutput,
+            TransactionOutputVersion,
+        },
     },
 };
 
@@ -225,6 +232,17 @@ pub trait TransactionKeyManagerInterface: KeyManagerInterface<PublicKey> {
         metadata_signature_message: &[u8; 32],
         range_proof_type: RangeProofType,
     ) -> Result<ComAndPubSignature, TransactionError>;
+
+    async fn get_one_sided_metadata_signature_message(
+        &self,
+        version: &TransactionOutputVersion,
+        script: &TariScript,
+        dest_address: TariAddress,
+        features: &OutputFeatures,
+        covenant: &Covenant,
+        encrypted_data: &EncryptedData,
+        minimum_value_promise: &MicroMinotari,
+    ) -> Result<[u8; 32], TransactionError>;
 
     async fn sign_script_message(
         &self,

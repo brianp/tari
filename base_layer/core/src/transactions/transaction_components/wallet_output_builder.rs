@@ -21,7 +21,10 @@
 //  USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use derivative::Derivative;
-use tari_common_types::types::{ComAndPubSignature, PublicKey};
+use tari_common_types::{
+    tari_address::TariAddress,
+    types::{ComAndPubSignature, PublicKey},
+};
 use tari_script::{ExecutionStack, TariScript};
 
 use crate::{
@@ -204,20 +207,25 @@ impl WalletOutputBuilder {
         mut self,
         key_manager: &KM,
         sender_offset_key_id: &TariKeyId,
+        dest_address: TariAddress,
     ) -> Result<Self, TransactionError> {
+        let sender_offset_public_key = key_manager.get_public_key_at_key_id(sender_offset_key_id).await?;
         let script = self
             .script
             .as_ref()
             .ok_or_else(|| TransactionError::BuilderError("Cannot sign metadata without a script".to_string()))?;
-        let sender_offset_public_key = key_manager.get_public_key_at_key_id(sender_offset_key_id).await?;
-        let metadata_message = TransactionOutput::metadata_signature_message_from_parts(
-            &self.version,
-            script,
-            &self.features,
-            &self.covenant,
-            &self.encrypted_data,
-            &self.minimum_value_promise,
-        );
+
+        let metadata_message = key_manager
+            .get_one_sided_metadata_signature_message(
+                &self.version,
+                script,
+                dest_address,
+                &self.features,
+                &self.covenant,
+                &self.encrypted_data,
+                &self.minimum_value_promise,
+            )
+            .await?;
         let metadata_signature = key_manager
             .get_one_sided_metadata_signature(
                 &self.commitment_mask_key_id,

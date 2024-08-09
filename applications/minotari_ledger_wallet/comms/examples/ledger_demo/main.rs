@@ -20,6 +20,7 @@ use minotari_ledger_wallet_comms::{
     accessor_methods::{
         ledger_get_app_name,
         ledger_get_dh_shared_secret,
+        ledger_get_one_sided_metadata_signature,
         ledger_get_public_key,
         ledger_get_public_spend_key,
         ledger_get_raw_schnorr_signature,
@@ -283,6 +284,31 @@ fn main() {
             signature.get_signature().to_hex(),
             signature.get_public_nonce().to_hex()
         ),
+        Err(e) => {
+            println!("\nError: {}\n", e);
+            return;
+        },
+    }
+
+    // GetScriptSchnorrSignature
+    println!("\ntest: GetOneSidedMetadataSignature");
+    let txo_version = 1u8;
+    let value = 123456;
+    let sender_offset_index = 42;
+    let commitment_mask = PrivateKey::from(123456);
+    let mut message = [0u8; 32];
+    OsRng.fill_bytes(&mut message);
+
+    match ledger_get_one_sided_metadata_signature(
+        account,
+        Network::LocalNet,
+        txo_version,
+        value,
+        sender_offset_index,
+        &commitment_mask,
+        &message,
+    ) {
+        Ok(comms_sig) => println!("signature:      ({:?})", comms_sig,),
         Err(e) => {
             println!("\nError: {}\n", e);
             return;

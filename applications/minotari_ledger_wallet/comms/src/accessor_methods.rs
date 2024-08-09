@@ -608,3 +608,52 @@ pub fn ledger_get_one_sided_metadata_signature(
         ))),
     }
 }
+
+/// Get the one sided metadata signature message
+pub fn ledger_get_one_sided_metadata_signature_message(
+    account: u64,
+    network: Network,
+    txo_version: u8,
+    dest_address: String,
+    features: &[u8],
+    covenant: &[u8],
+    encrypted_data: &[u8],
+    minimum_value_promise: u64,
+) -> Result<[u8; 32], LedgerDeviceError> {
+    debug!(
+        target: LOG_TARGET,
+        "ledger_get_one_sided_metadata_signature: account '{}', network '{}'",
+        account, network
+    );
+    verify_ledger_application()?;
+
+    let mut data = Vec::new();
+    data.extend_from_slice(&u64::from(network.as_byte()).to_le_bytes());
+    data.extend_from_slice(&u64::from(txo_version).to_le_bytes());
+    data.extend_from_slice(features);
+    data.extend_from_slice(covenant);
+    data.extend_from_slice(encrypted_data);
+    data.extend_from_slice(&minimum_value_promise.to_le_bytes());
+
+    match Command::<Vec<u8>>::build_command(account, Instruction::SetOneSidedMetadataSignatureMessage, data).execute() {
+        Ok(result) => {
+            if result.retcode() == AppSW::UserCancelled as u16 {
+                return Err(LedgerDeviceError::UserCancelled);
+            }
+            if result.data().len() < 161 {
+                return Err(LedgerDeviceError::Processing(format!(
+                    "'get_one_sided_metadata_signature_message' insufficient data - expected 161 got {} bytes ({:?})",
+                    result.data().len(),
+                    result
+                )));
+            }
+            let _data = result.data();
+            let message = [0u8; 32];
+            Ok(message)
+        },
+        Err(e) => Err(LedgerDeviceError::Instruction(format!(
+            "GetOneSidedMetadataSignature: {}",
+            e
+        ))),
+    }
+}

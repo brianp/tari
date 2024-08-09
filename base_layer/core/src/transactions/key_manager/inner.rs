@@ -28,6 +28,7 @@ use log::*;
 use minotari_ledger_wallet_comms::accessor_methods::{
     ledger_get_dh_shared_secret,
     ledger_get_one_sided_metadata_signature,
+    ledger_get_one_sided_metadata_signature_message,
     ledger_get_public_key,
     ledger_get_raw_schnorr_signature,
     ledger_get_script_offset,
@@ -41,6 +42,7 @@ use rand::RngCore;
 use strum::IntoEnumIterator;
 use tari_common_types::{
     key_branches::TransactionKeyManagerBranch,
+    tari_address::TariAddress,
     types::{ComAndPubSignature, Commitment, PrivateKey, PublicKey, RangeProof, Signature},
     wallet_types::WalletType,
 };
@@ -69,7 +71,7 @@ use tari_key_manager::{
         KeyManagerServiceError,
     },
 };
-use tari_script::CheckSigSchnorrSignature;
+use tari_script::{CheckSigSchnorrSignature, TariScript};
 use tari_utilities::ByteArray;
 use tokio::sync::RwLock;
 
@@ -81,6 +83,7 @@ pub const LEDGER_NOT_SUPPORTED: &str = "Ledger is not supported in this build, p
 
 use crate::{
     common::ConfidentialOutputHasher,
+    covenants::Covenant,
     one_sided::diffie_hellman_stealth_domain_hasher,
     transactions::{
         key_manager::{interface::TxoStage, TariKeyId},
@@ -89,6 +92,7 @@ use crate::{
             encrypted_data::PaymentId,
             EncryptedData,
             KernelFeatures,
+            OutputFeatures,
             RangeProofType,
             TransactionError,
             TransactionInput,
@@ -1440,6 +1444,73 @@ where TBackend: KeyManagerBackend<PublicKey> + 'static
                     .map_err(TransactionError::LedgerDeviceError)?;
 
                     Ok(comm_and_pub_sig)
+                }
+            },
+        }
+    }
+
+    #[allow(unused_variables)]
+    pub async fn get_one_sided_metadata_signature_message(
+        &self,
+        version: &TransactionOutputVersion,
+        script: &TariScript,
+        dest_address: TariAddress,
+        features: &OutputFeatures,
+        covenant: &Covenant,
+        encrypted_data: &EncryptedData,
+        minimum_value_promise: &MicroMinotari,
+    ) -> Result<[u8; 32], TransactionError> {
+        #[cfg(feature = "ledger")]
+        {
+            debug!(
+                target: LOG_TARGET,
+                "get_one_sided_metadata_signature_message: version {}, script {}, features {}, covenant {}, \
+                 encrypted_data {}, minimum_value_promise {}, wallet type {}",
+                version,
+                script,
+                features,
+                covenant,
+                encrypted_data,
+                minimum_value_promise,
+                self.wallet_type
+            );
+        }
+
+        match &self.wallet_type {
+            WalletType::DerivedKeys | WalletType::ProvidedKeys(_) => {
+                Ok(TransactionOutput::metadata_signature_message_from_parts(
+                    version,
+                    script,
+                    features,
+                    covenant,
+                    encrypted_data,
+                    minimum_value_promise,
+                ))
+            },
+            WalletType::Ledger(ledger) => {
+                #[cfg(not(feature = "ledger"))]
+                {
+                    Err(TransactionError::LedgerNotSupported(format!(
+                        "{} 'get_one_sided_metadata_signature' was called. ({})",
+                        LEDGER_NOT_SUPPORTED, ledger
+                    )))
+                }
+
+                #[cfg(feature = "ledger")]
+                {
+                    let message = ledger_get_one_sided_metadata_signature_message(
+                        ledger.account,
+                        ledger.network,
+                        version.as_u8(),
+                        dest_address.public_spend_key(),
+                        features.try_to_vec(),
+                        covenant.try_to_vec(),
+                        encrypted_data.as_bytes(),
+                        minimum_value_promise,
+                    )
+                    .map_err(TransactionError::LedgerDeviceError)?;
+
+                    Ok(message)
                 }
             },
         }

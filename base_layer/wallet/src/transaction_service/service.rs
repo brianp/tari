@@ -1784,6 +1784,7 @@ where
             .sign_as_sender_and_receiver_verified(
                 &self.resources.transaction_key_manager_service,
                 &sender_offset_private_key,
+                dest_address.clone(),
             )
             .await?
             .try_build(&self.resources.transaction_key_manager_service)

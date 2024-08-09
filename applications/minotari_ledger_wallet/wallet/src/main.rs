@@ -23,6 +23,7 @@ mod handlers {
     pub mod get_script_signature;
     pub mod get_version;
     pub mod get_view_key;
+    pub mod set_one_sided_metadata_signature_message;
 }
 
 use core::mem::MaybeUninit;
@@ -39,6 +40,10 @@ use handlers::{
     get_script_signature::{handler_get_script_signature_derived, handler_get_script_signature_managed},
     get_version::handler_get_version,
     get_view_key::handler_get_view_key,
+    set_one_sided_metadata_signature_message::{
+        handler_set_one_sided_metadata_signature_message,
+        MetadataSigMessageCtx,
+    },
 };
 #[cfg(feature = "pending_review_screen")]
 use ledger_device_sdk::ui::gadgets::display_pending_review;
@@ -132,6 +137,7 @@ pub enum Instruction {
     GetRawSchnorrSignature,
     GetScriptSchnorrSignature,
     GetOneSidedMetadataSignature,
+    SetOneSidedMetadataSignatureMessage { chunk_number: u8, more: bool },
 }
 
 const P2_MORE: u8 = 0x01;
@@ -205,6 +211,12 @@ impl TryFrom<ApduHeader> for Instruction {
             (InstructionMapping::GetRawSchnorrSignature, 0, 0) => Ok(Instruction::GetRawSchnorrSignature),
             (InstructionMapping::GetScriptSchnorrSignature, 0, 0) => Ok(Instruction::GetScriptSchnorrSignature),
             (InstructionMapping::GetOneSidedMetadataSignature, 0, 0) => Ok(Instruction::GetOneSidedMetadataSignature),
+            (InstructionMapping::SetOneSidedMetadataSignatureMessage, 0..=MAX_PAYLOADS, 0 | P2_MORE) => {
+                Ok(Instruction::SetOneSidedMetadataSignatureMessage {
+                    chunk_number: value.p1,
+                    more: value.p2 == P2_MORE,
+                })
+            },
             (InstructionMapping::GetScriptSchnorrSignature, _, _) => Err(AppSW::WrongP1P2),
             (_, _, _) => Err(AppSW::InsNotSupported),
         }
@@ -226,12 +238,13 @@ extern "C" fn sample_main() {
 
     // This is long-lived over the span the ledger app is open, across multiple interactions
     let mut offset_ctx = ScriptOffsetCtx::new();
+    let mut message_ctx = MetadataSigMessageCtx::new();
 
     loop {
         // Wait for either a specific button push to exit the app
         // or an APDU command
         if let Event::Command(ins) = ui_menu_main(&mut comm) {
-            match handle_apdu(&mut comm, ins, &mut offset_ctx) {
+            match handle_apdu(&mut comm, ins, &mut offset_ctx, &mut message_ctx) {
                 Ok(()) => comm.reply_ok(),
                 Err(sw) => comm.reply(sw),
             }
@@ -239,7 +252,12 @@ extern "C" fn sample_main() {
     }
 }
 
-fn handle_apdu(comm: &mut Comm, ins: Instruction, offset_ctx: &mut ScriptOffsetCtx) -> Result<(), AppSW> {
+fn handle_apdu(
+    comm: &mut Comm,
+    ins: Instruction,
+    offset_ctx: &mut ScriptOffsetCtx,
+    message_ctx: &mut MetadataSigMessageCtx,
+) -> Result<(), AppSW> {
     match ins {
         Instruction::GetVersion => handler_get_version(comm),
         Instruction::GetAppName => {
@@ -258,5 +276,8 @@ fn handle_apdu(comm: &mut Comm, ins: Instruction, offset_ctx: &mut ScriptOffsetC
         Instruction::GetRawSchnorrSignature => handler_get_raw_schnorr_signature(comm),
         Instruction::GetScriptSchnorrSignature => handler_get_script_schnorr_signature(comm),
         Instruction::GetOneSidedMetadataSignature => handler_get_one_sided_metadata_signature(comm),
+        Instruction::SetOneSidedMetadataSignatureMessage { chunk_number, more } => {
+            handler_set_one_sided_metadata_signature_message(comm, chunk_number, more, message_ctx)
+        },
     }
 }
